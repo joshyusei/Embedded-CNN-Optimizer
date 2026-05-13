@@ -62,6 +62,32 @@
 
 此版本作為效能比較的基準點。
 
+## 效能評估 (Performance Benchmarking)
+
+為了量化純 C 語言實作與成熟框架之間的效能差距，我們引入了 `benchmark_cnn.py`。
+
+### 1. 基準測試指令碼 (`benchmark_cnn.py`)
+使用 PyTorch (CPU) 作為對照組，測試在相同權重數量（Params: 432）與輸入維度（3x224x224）下的推論速度。支援多種架構：
+*   Standard 3x3 (與 C 版本演算法一致)
+*   Depthwise Separable Convolution
+*   Bottleneck Layer
+
+### 2. 數據對比 (C vs. PyTorch)
+測試環境：Intel CPU (Single Thread)
+
+| 實作方式 | 參數量 | 延遲 (Latency) | 效能差距 |
+| :--- | :--- | :--- | :--- |
+| **C Baseline (本專案)** | 432 | **~195.00 ms** | 基準 (1x) |
+| **PyTorch (CPU)** | 432 | **~1.07 ms** | **~180x 加速** |
+
+### 3. 分析與優化方向
+目前的 C 語言版本比 PyTorch 慢了約 180 倍。這主要是因為：
+*   **缺乏 SIMD 指令**：PyTorch 底層使用了 MKL/OpenBLAS 等優化庫，充分利用了 AVX2/AVX-512 指令集進行向量化運算。
+*   **記憶體存取模式**：標準的六層迴圈未考慮 CPU Cache 命中率。
+*   **編譯器優化**：目前的建置腳本僅使用基礎 GCC 參數。
+
+這份數據確立了後續優化（如：Loop Unrolling, SIMD 向量化, Tiling）的必要性與目標。
+
 ## 目前進度
 - [x] 環境建置與 Hello World 測試
 - [x] 基礎張量運算與卷積實作
